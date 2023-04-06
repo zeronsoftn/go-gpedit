@@ -131,7 +131,7 @@ func (gpo *GroupPolicyObject) AddRef() (uint, error) {
 		gpo.vtable.AddRef,
 		gpo.pvObj,
 	)
-	return uint(ret), WinErrHandler(err)
+	return uint(ret), err
 }
 
 func (gpo *GroupPolicyObject) Release() (uint, error) {
@@ -139,7 +139,7 @@ func (gpo *GroupPolicyObject) Release() (uint, error) {
 		gpo.vtable.Release,
 		gpo.pvObj,
 	)
-	return uint(ret), WinErrHandler(err)
+	return uint(ret), err
 }
 
 func (gpo *GroupPolicyObject) New(pszDomainName string, pszDisplayName string, dwFlags uint32) error {
@@ -159,10 +159,7 @@ func (gpo *GroupPolicyObject) New(pszDomainName string, pszDisplayName string, d
 		uintptr(unsafe.Pointer(s2)),
 		uintptr(dwFlags),
 	)
-	if err != windows.Errno(0) {
-		log.Printf("Error code: %v", err)
-	}
-	return WinErrHandler(ret)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) OpenDSGPO(pszPath string, dwFlags uint32) error {

@@ -7,24 +7,22 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// Return nil only if all values are 0 or nil
-func WinErrHandler(i ...interface{}) error {
-	for _, el := range i {
-		switch v := el.(type) {
-		case windows.Errno:
-			if v == windows.Errno(0) {
-				continue
-			} else {
-				return v
-			}
-		case uintptr:
-			if v == 0 {
-				continue
-			} else {
-				return fmt.Errorf("%d", v)
-			}
-		default:
-			fmt.Printf("WinErrHandler: Unhandled type %T of value %v", v, v)
+type SysError struct {
+	error
+	code uint32
+}
+
+func (e *SysError) Error() string {
+	return fmt.Sprintf("System Error 0x%08x", e.code)
+}
+
+func WinErrHandler(err error, rc uintptr) error {
+	if err != nil {
+		return err
+	}
+	if rc != 0 {
+		return &SysError{
+			code: uint32(rc),
 		}
 	}
 	return nil
