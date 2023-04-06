@@ -6,38 +6,17 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+var (
+	modOle32             = windows.NewLazyDLL("ole32.dll")
+	procCoCreateInstance = modOle32.NewProc("CoCreateInstance")
+)
+
 func WinErrHandler(err error, rc uintptr) error {
 	if err != nil {
 		return err
 	}
 	if rc != 0 {
 		return windows.Errno(rc)
-	}
-	return nil
-}
-
-var (
-	modOle32             = windows.NewLazyDLL("ole32.dll")
-	procCoInitialize     = modOle32.NewProc("CoInitialize")
-	procCoUninitialize   = modOle32.NewProc("CoUninitialize")
-	procCoCreateInstance = modOle32.NewProc("CoCreateInstance")
-)
-
-func coInitialize(pvReserved uintptr, dwCoInit uint32) error {
-	hr, _, _ := procCoInitialize.Call(
-		uintptr(pvReserved),
-		uintptr(dwCoInit),
-	)
-	if hr != 0 {
-		return windows.Errno(hr)
-	}
-	return nil
-}
-
-func coUninitialize() error {
-	hr, _, _ := procCoUninitialize.Call()
-	if hr != 0 {
-		return windows.Errno(hr)
 	}
 	return nil
 }

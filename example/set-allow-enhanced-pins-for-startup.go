@@ -9,7 +9,7 @@ import (
 )
 
 func main() {
-	err := go_gpedit.InitializeCOM()
+	err := windows.CoInitializeEx(0, windows.COINIT_APARTMENTTHREADED)
 	if err != nil {
 		log.Fatalln(err)
 	}

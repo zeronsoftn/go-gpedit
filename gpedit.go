@@ -92,14 +92,6 @@ type GroupPolicyObject struct {
 	vtable *GroupPolicyObjectVtable
 }
 
-func InitializeCOM() error {
-	err := coInitialize(uintptr(0), uint32(COINIT_APARTMENTTHREADED))
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func NewGroupPolicyObject() (*GroupPolicyObject, error) {
 	pvObj, err := coCreateInstance(&CLSID_GroupPolicyObject, nil, windows.CLSCTX_INPROC_SERVER, &IID_IGroupPolicyObject)
 	if err != nil {
