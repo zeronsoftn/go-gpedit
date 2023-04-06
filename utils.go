@@ -12,7 +12,7 @@ var (
 )
 
 func WinErrHandler(err error, rc uintptr) error {
-	if err != nil {
+	if err != windows.DS_S_SUCCESS && err != nil {
 		return err
 	}
 	if rc != 0 {
