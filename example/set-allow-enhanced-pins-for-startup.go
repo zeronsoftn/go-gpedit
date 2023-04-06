@@ -21,12 +21,12 @@ func main() {
 
 	defer gpedit.Release()
 
-	if err = gpedit.OpenLocalMachineGPO(go_gpedit.GPO_OPEN_LOAD_REGISTRY); err != nil {
+	if err = gpedit.OpenLocalMachineGPO(go_gpedit.GPO_OPEN_LOAD_REGISTRY); err != windows.DS_S_SUCCESS {
 		log.Fatalln(err)
 	}
 
 	var keyMachine windows.Handle
-	if err = gpedit.GetRegistryKey(uint32(go_gpedit.GPO_SECTION_MACHINE), &keyMachine); err != nil {
+	if err = gpedit.GetRegistryKey(uint32(go_gpedit.GPO_SECTION_MACHINE), &keyMachine); err != windows.DS_S_SUCCESS {
 		log.Fatalln(err)
 	}
 
@@ -48,7 +48,7 @@ func main() {
 		go_gpedit.TRUE,
 		&go_gpedit.REGISTRY_EXTENSION_GUID,
 		&go_gpedit.CLSID_GPESnapIn,
-	); err != nil {
+	); err != windows.DS_S_SUCCESS {
 		log.Fatalln(err)
 	}
 
