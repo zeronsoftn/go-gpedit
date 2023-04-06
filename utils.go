@@ -1,14 +1,25 @@
 package go_gpedit
 
 import (
-	"golang.org/x/sys/windows"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 var (
 	modOle32             = windows.NewLazyDLL("ole32.dll")
 	procCoCreateInstance = modOle32.NewProc("CoCreateInstance")
 )
+
+func WinErrHandler(err error, rc uintptr) error {
+	if err != nil {
+		return err
+	}
+	if rc != 0 {
+		return windows.Errno(rc)
+	}
+	return nil
+}
 
 func coCreateInstance(rclsid *windows.GUID, pUnkOuter *windows.GUID, dwClsContext uint32, riid *windows.GUID) (uintptr, error) {
 	var pvObj uintptr = 0

@@ -1,8 +1,10 @@
 package go_gpedit
 
 import (
-	"golang.org/x/sys/windows"
+	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/windows"
 )
 
 type GPO_OPEN_FLAG uint32
@@ -37,19 +39,52 @@ const (
 	GPOTypeLocalGroup = GROUP_POLICY_OBJECT_TYPE(4)
 )
 
+type COINIT uint32
+
+const (
+	COINIT_APARTMENTTHREADED = COINIT(0x2)
+	COINIT_MULTITHREADED     = COINIT(0x0)
+	COINIT_DISABLE_OLE1DDE   = COINIT(0x4)
+	COINIT_SPEED_OVER_MEMORY = COINIT(0x8)
+)
+
 var (
 	CLSID_GroupPolicyObject = windows.GUID{
 		Data1: 0xea502722,
-		Data2: 0xbaa8,
+		Data2: 0xa23d,
 		Data3: 0x11d1,
-		Data4: [8]byte{0xbf, 0x3c, 0x00, 0xc0, 0x4f, 0xd8, 0xd5, 0x96},
+		Data4: [8]byte{0xa7, 0xd3, 0x0, 0x0, 0xf8, 0x75, 0x71, 0xe3},
 	}
 	IID_IGroupPolicyObject = windows.GUID{
 		Data1: 0xea502723,
-		Data2: 0xbaa8,
+		Data2: 0xa23d,
 		Data3: 0x11d1,
-		Data4: [8]byte{0xbf, 0x3c, 0x00, 0xc0, 0x4f, 0xd8, 0xd5, 0x96},
+		Data4: [8]byte{0xa7, 0xd3, 0x0, 0x0, 0xf8, 0x75, 0x71, 0xe3},
 	}
+)
+
+var (
+	REGISTRY_EXTENSION_GUID = windows.GUID{
+		Data1: 0x35378EAC,
+		Data2: 0x683F,
+		Data3: 0x11D2,
+		Data4: [8]byte{0xA8, 0x9A, 0x00, 0xC0, 0x4F, 0xBB, 0xCF, 0xA2},
+	}
+	CLSID_GPESnapIn = windows.GUID{
+		Data1: 0x8fc0b734,
+		Data2: 0xa0e1,
+		Data3: 0x11d1,
+		Data4: [8]byte{0xa7, 0xd3, 0x0, 0x0, 0xf8, 0x75, 0x71, 0xe3},
+	}
+)
+
+// Compatibilty for WindowAPI defined types in golang
+type WINBOOL int
+
+// Constants for readability
+const (
+	TRUE  = 1
+	FALSE = 0
 )
 
 type GroupPolicyObject struct {
@@ -62,93 +97,269 @@ func NewGroupPolicyObject() (*GroupPolicyObject, error) {
 	if err != nil {
 		return nil, err
 	}
-	vtable := (*GroupPolicyObjectVtable)(unsafe.Pointer(pvObj))
+	vtable := (*GroupPolicyObjectVtable)(unsafe.Pointer(*(*uintptr)(unsafe.Pointer(pvObj))))
 	return &GroupPolicyObject{
 		pvObj:  pvObj,
 		vtable: vtable,
 	}, nil
 }
 
-func (gpo *GroupPolicyObject) QueryInterface(riid *windows.GUID) (any /* ppvObj */, error) {
-	return nil, nil
+func (gpo *GroupPolicyObject) QueryInterface(riid *windows.GUID) (uintptr, error) {
+	var pvObj uintptr
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.QueryInterface,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(riid)),
+		uintptr(unsafe.Pointer(&pvObj)),
+	)
+	return pvObj, WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) AddRef() (uint, error) {
-	return 0, nil
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.AddRef,
+		gpo.pvObj,
+	)
+	return uint(ret), err
 }
 
 func (gpo *GroupPolicyObject) Release() (uint, error) {
-	return 0, nil
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.Release,
+		gpo.pvObj,
+	)
+	return uint(ret), err
 }
 
 func (gpo *GroupPolicyObject) New(pszDomainName string, pszDisplayName string, dwFlags uint32) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszDomainName)
+	if err != nil {
+		return err
+	}
+	s2, err := windows.UTF16PtrFromString(pszDisplayName)
+	if err != nil {
+		return err
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.New,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(s1)),
+		uintptr(unsafe.Pointer(s2)),
+		uintptr(dwFlags),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) OpenDSGPO(pszPath string, dwFlags uint32) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszPath)
+	if err != nil {
+		return err
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.OpenDSGPO,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(s1)),
+		uintptr(dwFlags),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) OpenLocalMachineGPO(dwFlags GPO_OPEN_FLAG) error {
-	return nil
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.OpenLocalMachineGPO,
+		gpo.pvObj,
+		uintptr(dwFlags),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) OpenRemoteMachineGPO(pszComputerName string, dwFlags uint32) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszComputerName)
+	if err != nil {
+		return err
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.OpenRemoteMachineGPO,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(s1)),
+		uintptr(dwFlags),
+	)
+	return WinErrHandler(err, ret)
 }
 
-func (gpo *GroupPolicyObject) Save(bMachine bool, bAdd bool, pGuidExtension *windows.GUID, pGuid *windows.GUID) error {
-	return nil
+func (gpo *GroupPolicyObject) Save(bMachine WINBOOL, bAdd WINBOOL, pGuidExtension *windows.GUID, pGuid *windows.GUID) error {
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.Save,
+		gpo.pvObj,
+		uintptr(bMachine),
+		uintptr(bAdd),
+		uintptr(unsafe.Pointer(pGuidExtension)),
+		uintptr(unsafe.Pointer(pGuid)),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) Delete() error {
-	return nil
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.Delete,
+		gpo.pvObj,
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) GetName(pszName string, cchMaxLength int) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszName)
+	if err != nil {
+		return nil
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetName,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(s1)),
+		uintptr(cchMaxLength),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) GetDisplayName(pszName string, cchMaxLength int) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszName)
+	if err != nil {
+		return err
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetDisplayName,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(s1)),
+		uintptr(cchMaxLength),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) SetDisplayName(pszName string) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszName)
+	if err != nil {
+		return err
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.SetDisplayName,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(s1)),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) GetPath(pszPath string, cchMaxPath int) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszPath)
+	if err != nil {
+		return err
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetPath,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(s1)),
+		uintptr(cchMaxPath),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) GetDSPath(dwSection uint32, pszPath string, cchMaxPath int) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszPath)
+	if err != nil {
+		return err
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetDSPath,
+		gpo.pvObj,
+		uintptr(dwSection),
+		uintptr(unsafe.Pointer(s1)),
+		uintptr(cchMaxPath),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) GetFileSysPath(dwSection uint32, pszPath string, cchMaxPath int) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszPath)
+	if err != nil {
+		return err
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetFileSysPath,
+		gpo.pvObj,
+		uintptr(dwSection),
+		uintptr(unsafe.Pointer(s1)),
+		uintptr(cchMaxPath),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) GetRegistryKey(dwSection uint32, hKey *windows.Handle) error {
-	return nil
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetRegistryKey,
+		gpo.pvObj,
+		uintptr(dwSection),
+		uintptr(unsafe.Pointer(hKey)),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) GetOptions(dwOptions *uint32) error {
-	return nil
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetOptions,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(dwOptions)),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) SetOptions(dwOptions uint32, dwMask uint32) error {
-	return nil
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.SetOptions,
+		gpo.pvObj,
+		uintptr(dwOptions),
+		uintptr(dwMask),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) GetType(gpoType *GROUP_POLICY_OBJECT_TYPE) error {
-	return nil
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetType,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(gpoType)),
+	)
+	return WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) GetMachineName(pszName string, cchMaxLength int) error {
-	return nil
+	s1, err := windows.UTF16PtrFromString(pszName)
+	if err != nil {
+		return err
+	}
+
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetMachineName,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(s1)),
+		uintptr(cchMaxLength),
+	)
+	return WinErrHandler(err, ret)
 }
 
-//func (gpo *GroupPolicyObject) GetPropertySheetPages(hPages **HPROPSHEETPAGE, uPageCount *uint) error {
-//	return 0
-//}
+/*func (gpo *GroupPolicyObject) GetPropertySheetPages(hPages **HPROPSHEETPAGE, uPageCount *uint) error {
+	ret, _, err := syscall.SyscallN(
+		gpo.vtable.GetDSPath,
+		gpo.pvObj,
+		uintptr(unsafe.Pointer(hPages)),
+		uintptr(unsafe.Pointer(uPageCount)),
+	)
+	return WinErrHandler(err, ret)
+}*/
