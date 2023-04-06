@@ -97,7 +97,7 @@ func NewGroupPolicyObject() (*GroupPolicyObject, error) {
 	if err != nil {
 		return nil, err
 	}
-	vtable := (*GroupPolicyObjectVtable)(unsafe.Pointer(pvObj))
+	vtable := (*GroupPolicyObjectVtable)(unsafe.Pointer(*(*uintptr)(unsafe.Pointer(pvObj))))
 	return &GroupPolicyObject{
 		pvObj:  pvObj,
 		vtable: vtable,
