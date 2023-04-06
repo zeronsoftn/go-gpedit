@@ -1,7 +1,6 @@
 package go_gpedit
 
 import (
-	"log"
 	"syscall"
 	"unsafe"
 
@@ -113,17 +112,15 @@ func NewGroupPolicyObject() (*GroupPolicyObject, error) {
 	}, nil
 }
 
-func (gpo *GroupPolicyObject) QueryInterface(riid *windows.GUID) (any /* ppvObj */, error) {
+func (gpo *GroupPolicyObject) QueryInterface(riid *windows.GUID) (uintptr, error) {
+	var pvObj uintptr
 	ret, _, err := syscall.SyscallN(
 		gpo.vtable.QueryInterface,
 		gpo.pvObj,
 		uintptr(unsafe.Pointer(riid)),
-		uintptr(unsafe.Pointer(&gpo.pvObj)),
+		uintptr(unsafe.Pointer(&pvObj)),
 	)
-	if err != windows.Errno(0) {
-		log.Printf("%v", err)
-	}
-	return &gpo.pvObj, WinErrHandler(err, ret)
+	return pvObj, WinErrHandler(err, ret)
 }
 
 func (gpo *GroupPolicyObject) AddRef() (uint, error) {
