@@ -9,6 +9,11 @@ import (
 )
 
 func main() {
+	err := go_gpedit.InitializeCOM()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	gpedit, err := go_gpedit.NewGroupPolicyObject()
 	if err != nil {
 		log.Fatalln(err)

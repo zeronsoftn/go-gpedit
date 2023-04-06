@@ -40,6 +40,15 @@ const (
 	GPOTypeLocalGroup = GROUP_POLICY_OBJECT_TYPE(4)
 )
 
+type COINIT uint32
+
+const (
+	COINIT_APARTMENTTHREADED = COINIT(0x2)
+	COINIT_MULTITHREADED     = COINIT(0x0)
+	COINIT_DISABLE_OLE1DDE   = COINIT(0x4)
+	COINIT_SPEED_OVER_MEMORY = COINIT(0x8)
+)
+
 var (
 	CLSID_GroupPolicyObject = windows.GUID{
 		Data1: 0xea502722,
@@ -82,6 +91,14 @@ const (
 type GroupPolicyObject struct {
 	pvObj  uintptr
 	vtable *GroupPolicyObjectVtable
+}
+
+func InitializeCOM() error {
+	err := coInitialize(uintptr(0), uint32(COINIT_APARTMENTTHREADED))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func NewGroupPolicyObject() (*GroupPolicyObject, error) {
